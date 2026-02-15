@@ -1,1 +1,1 @@
-from .clone_repo import clone_repo
+from .scripts.clone_repo import clone_repo
