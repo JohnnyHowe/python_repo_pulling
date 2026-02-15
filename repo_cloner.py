@@ -2,10 +2,8 @@ from pathlib import Path
 import shlex
 from typing import Optional
 
-from ..run_command import *
-
 from .helpers import *
-from ..pretty_print import *
+from .pretty_print import *
 
 
 class RepoPuller:
