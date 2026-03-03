@@ -56,11 +56,27 @@ class RepoPuller:
 		self._run_command(command)
 
 	def _update_repo(self, version: str) -> None:
-		fetch_command = f"git fetch --tags origin".split(" ") + [version]
-		self._run_command(fetch_command)
+		# Prefer branch > tag > commit
+		# Use ls-remote to avoid fetching everything.
+		def _ls_remote(ref_type: str) -> bool:
+			# ref_type: "heads" or "tags"
+			cmd = ["git", "ls-remote", f"--{ref_type}", "origin", version]
+			result = subprocess.run(cmd, cwd=self.path, text=True, capture_output=True)
+			return result.returncode == 0 and bool(result.stdout.strip())
 
-		checkout_command = "git checkout FETCH_HEAD".split(" ")
-		self._run_command(checkout_command)
+		if _ls_remote("heads"):
+			self._run_command(["git", "fetch", "--depth=1", "origin", f"refs/heads/{version}:refs/remotes/origin/{version}"])
+			self._run_command(["git", "checkout", f"refs/remotes/origin/{version}"])
+			return
+
+		if _ls_remote("tags"):
+			self._run_command(["git", "fetch", "--depth=1", "origin", f"refs/tags/{version}:refs/tags/{version}"])
+			self._run_command(["git", "checkout", f"refs/tags/{version}"])
+			return
+
+		# Fallback: treat as commit
+		self._run_command(["git", "fetch", "--depth=1", "origin", version])
+		self._run_command(["git", "checkout", "FETCH_HEAD"])
 
 	def _run_command(self, command: list[str]):
 		self._log("> " + shlex.join(command))
